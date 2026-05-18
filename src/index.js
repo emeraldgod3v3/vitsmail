@@ -6,10 +6,14 @@ const store = require('./store');
 const PORT = process.env.PORT || 3000;
 const SMTP_PORT = process.env.SMTP_PORT || 25;
 
-const app = createWebServer();
+const expressApp = createWebServer();
 const smtpServer = createSMTPServer();
 
-app.listen(PORT, () => {
+smtpServer.on('error', (err) => {
+  console.error('SMTP server error:', err.message);
+});
+
+const webServer = expressApp.listen(PORT, () => {
   console.log(`Web server running on http://localhost:${PORT}`);
 });
 
@@ -25,7 +29,7 @@ function gracefulShutdown(signal) {
   smtpServer.close(() => {
     console.log('SMTP server closed');
   });
-  app.close(() => {
+  webServer.close(() => {
     console.log('Web server closed');
     process.exit(0);
   });
