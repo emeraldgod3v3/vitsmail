@@ -57,8 +57,8 @@ function createWebServer() {
         id: email.id,
         from: security.sanitizeInput(email.from),
         subject: security.sanitizeInput(email.subject),
-        text: email.text,
-        html: email.html,
+        text: security.sanitizeInput(email.text),
+        html: security.sanitizeInput(email.html),
         receivedAt: email.receivedAt
       }));
       
