@@ -1,4 +1,5 @@
 const DOMAIN = 'vitsmail.sryze.cc';
+const API_BASE_URL = 'http://13.218.249.102:3000';
 
 let currentAddress = null;
 let expiryInterval = null;
@@ -20,7 +21,7 @@ function showEmailDetail() {
 
 async function createMailbox(address) {
   try {
-    const response = await fetch('/api/mailbox', {
+    const response = await fetch(API_BASE_URL + '/api/mailbox', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ address })
@@ -75,7 +76,7 @@ async function fetchEmails() {
   if (!currentAddress) return;
   
   try {
-    const response = await fetch(`/api/mailbox/${encodeURIComponent(currentAddress)}`);
+    const response = await fetch(API_BASE_URL + `/api/mailbox/${encodeURIComponent(currentAddress)}`);
     
     if (response.status === 404) {
       alert('Mailbox expired or deleted');
@@ -161,7 +162,7 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
   if (!currentAddress) return;
   
   try {
-    await fetch(`/api/mailbox/${encodeURIComponent(currentAddress)}`, { method: 'DELETE' });
+    await fetch(API_BASE_URL + `/api/mailbox/${encodeURIComponent(currentAddress)}`, { method: 'DELETE' });
     clearInterval(expiryInterval);
     clearInterval(pollInterval);
     currentAddress = null;
