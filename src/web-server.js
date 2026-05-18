@@ -3,8 +3,26 @@ const path = require('path');
 const store = require('./store');
 const security = require('./middleware/security');
 
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'https://vitsmail.onrender.com'
+];
+
 function createWebServer() {
   const app = express();
+  
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
+  });
   
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
