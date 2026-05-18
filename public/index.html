@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vitsmail - Secure Disposable Email</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔒 vitsmail</h1>
+      <p class="tagline">Secure disposable email - 30 minute expiry</p>
+    </header>
+    
+    <main>
+      <section class="create-mailbox">
+        <h2>Create Temporary Email</h2>
+        <div class="create-options">
+          <button id="random-btn" class="btn primary">Generate Random Address</button>
+          <div class="custom-option">
+            <input type="text" id="custom-username" placeholder="username">
+            <span class="domain">@vitsmail.sryze.cc</span>
+            <button id="custom-btn" class="btn secondary">Create Custom</button>
+          </div>
+        </div>
+      </section>
+      
+      <section class="mailbox-view hidden" id="mailbox-section">
+        <div class="mailbox-header">
+          <h3>Your Temporary Email</h3>
+          <div class="mailbox-address">
+            <span id="display-address"></span>
+            <button id="copy-btn" class="btn small">Copy</button>
+            <button id="delete-btn" class="btn small danger">Delete</button>
+          </div>
+          <p class="expiry">Expires in: <span id="expiry-time"></span></p>
+        </div>
+        
+        <div class="emails-list" id="emails-list">
+          <p class="empty-state">No emails yet. Waiting for incoming mail...</p>
+        </div>
+      </section>
+      
+      <section class="email-detail hidden" id="email-detail">
+        <button id="back-btn" class="btn small">← Back</button>
+        <div class="email-content">
+          <div class="email-header">
+            <h3 id="email-subject"></h3>
+            <p class="email-meta">From: <span id="email-from"></span></p>
+            <p class="email-meta">Received: <span id="email-time"></span></p>
+          </div>
+          <div class="email-body" id="email-body"></div>
+        </div>
+      </section>
+    </main>
+    
+    <footer>
+      <p>All emails automatically expire after 30 minutes</p>
+    </footer>
+  </div>
+  
+  <script src="app.js"></script>
+</body>
+</html>
