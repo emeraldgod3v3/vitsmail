@@ -19,9 +19,17 @@ smtpServer.listen(SMTP_PORT, '0.0.0.0', () => {
 
 store.startCleanup();
 
-process.on('SIGINT', () => {
-  console.log('\nShutting down...');
+function gracefulShutdown(signal) {
+  console.log(`\n${signal} received, shutting down...`);
   store.stopCleanup();
-  smtpServer.close();
-  process.exit(0);
-});
+  smtpServer.close(() => {
+    console.log('SMTP server closed');
+  });
+  app.close(() => {
+    console.log('Web server closed');
+    process.exit(0);
+  });
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
