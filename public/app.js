@@ -3,6 +3,7 @@ const DOMAIN = 'vitsmail.sryze.cc';
 let currentAddress = null;
 let expiryInterval = null;
 let pollInterval = null;
+let emailsCache = [];
 
 function showSection(sectionId) {
   document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
@@ -98,14 +99,15 @@ async function fetchEmails() {
 
 function renderEmails(emails) {
   const container = document.getElementById('emails-list');
+  emailsCache = emails;
   
   if (!emails || emails.length === 0) {
     container.innerHTML = '<p class="empty-state">No emails yet. Waiting for incoming mail...</p>';
     return;
   }
   
-  container.innerHTML = emails.map(email => `
-    <div class="email-item" onclick="showEmail(${JSON.stringify(email).replace(/"/g, '&quot;')})">
+  container.innerHTML = emails.map((email, index) => `
+    <div class="email-item" onclick="showEmailByIndex(${index})">
       <h4>${escapeHtml(email.subject)}</h4>
       <p class="meta">From: ${escapeHtml(email.from)}</p>
       <p class="meta">${new Date(email.receivedAt).toLocaleString()}</p>
@@ -128,6 +130,13 @@ window.showEmail = function(email) {
   document.getElementById('email-body').textContent = body;
   
   showEmailDetail();
+};
+
+window.showEmailByIndex = function(index) {
+  const email = emailsCache[index];
+  if (email) {
+    showEmail(email);
+  }
 };
 
 document.getElementById('random-btn').addEventListener('click', () => createMailbox(null));
