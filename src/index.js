@@ -2,6 +2,8 @@ require('dotenv').config();
 const { createWebServer } = require('./web-server');
 const { createSMTPServer } = require('./smtp-server');
 const store = require('./store');
+const https = require('https');
+const fs = require('fs');
 
 const PORT = process.env.PORT || 3000;
 const SMTP_PORT = process.env.SMTP_PORT || 25;
@@ -9,8 +11,13 @@ const SMTP_ENABLED = process.env.SMTP_ENABLED !== 'false';
 
 const expressApp = createWebServer();
 
-const webServer = expressApp.listen(PORT, () => {
-  console.log(`Web server running on http://localhost:${PORT}`);
+const httpsServer = https.createServer({
+  key: fs.readFileSync('/etc/letsencrypt/live/vitsmail.sryze.cc/privkey.pem'),
+  cert: fs.readFileSync('/etc/letsencrypt/live/vitsmail.sryze.cc/fullchain.pem')
+}, expressApp);
+
+const webServer = httpsServer.listen(PORT, () => {
+  console.log(`Web server running on https://localhost:${PORT}`);
 });
 
 if (SMTP_ENABLED) {
@@ -32,7 +39,7 @@ store.startCleanup();
 function gracefulShutdown(signal) {
   console.log(`\n${signal} received, shutting down...`);
   store.stopCleanup();
-  webServer.close(() => {
+  httpsServer.close(() => {
     console.log('Web server closed');
     process.exit(0);
   });

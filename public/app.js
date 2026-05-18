@@ -1,5 +1,5 @@
 const DOMAIN = 'vitsmail.sryze.cc';
-const API_BASE_URL = 'http://13.218.249.102:3000';
+const API_BASE_URL = 'https://vitsmail.sryze.cc';
 
 let currentAddress = null;
 let expiryInterval = null;
