@@ -200,11 +200,49 @@ input:focus {
 
 .email-body {
   line-height: 1.6;
-  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .email-body a {
   color: #4a9eff;
+  text-decoration: underline;
+}
+
+.email-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+.email-body table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.email-body td, .email-body th {
+  padding: 8px;
+  border: 1px solid #333;
+}
+
+.email-body blockquote {
+  border-left: 3px solid #4a9eff;
+  padding-left: 15px;
+  margin: 10px 0;
+  color: #aaa;
+}
+
+.email-body pre {
+  background: #1a1a2e;
+  padding: 10px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.email-body code {
+  background: #1a1a2e;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.9em;
 }
 
 footer {

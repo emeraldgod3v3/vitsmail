@@ -150,8 +150,12 @@ window.showEmail = function(email) {
   const bodyEl = document.getElementById('email-body');
   if (email.html) {
     bodyEl.innerHTML = email.html;
+    bodyEl.querySelectorAll('a').forEach(a => {
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener noreferrer');
+    });
   } else {
-    bodyEl.textContent = email.text || '';
+    bodyEl.innerHTML = email.text ? email.text.replace(/\n/g, '<br>') : '';
   }
   
   showEmailDetail();
