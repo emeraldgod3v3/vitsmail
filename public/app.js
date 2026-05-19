@@ -12,23 +12,52 @@ function saveSession(address, expiresAt) {
   if (address) {
     localStorage.setItem('vm_addr', address);
     localStorage.setItem('vm_exp', String(expiresAt || 0));
+    sessionStorage.setItem('vm_addr', address);
+    sessionStorage.setItem('vm_exp', String(expiresAt || 0));
   }
 }
 
 function clearSession() {
   localStorage.removeItem('vm_addr');
   localStorage.removeItem('vm_exp');
+  sessionStorage.removeItem('vm_addr');
+  sessionStorage.removeItem('vm_exp');
+}
+
+function getMailboxFromUrl() {
+  const path = window.location.pathname;
+  const match = path.match(/^\/vitsmail\/mail\/([^/]+)$/);
+  if (match) {
+    try {
+      return decodeURIComponent(match[1]);
+    } catch (e) {
+      return match[1];
+    }
+  }
+  return null;
 }
 
 function restoreSession() {
-  const path = window.location.pathname;
-  if (path.startsWith('/vitsmail/mail/') && !path.startsWith('/vitsmail/mail/receipt/')) {
-    const addr = decodeURIComponent(path.split('/vitsmail/mail/')[1]);
-    if (addr) return addr;
+  // Priority 1: Get from URL (most reliable for refresh)
+  const urlAddr = getMailboxFromUrl();
+  if (urlAddr) {
+    return urlAddr;
   }
-  const addr = localStorage.getItem('vm_addr');
-  const exp = parseInt(localStorage.getItem('vm_exp') || '0', 10);
-  if (addr && exp > Date.now()) return addr;
+  
+  // Priority 2: Check localStorage
+  const localAddr = localStorage.getItem('vm_addr');
+  const localExp = parseInt(localStorage.getItem('vm_exp') || '0', 10);
+  if (localAddr && localExp > Date.now()) {
+    return localAddr;
+  }
+  
+  // Priority 3: Check sessionStorage (for tab persistence)
+  const sessionAddr = sessionStorage.getItem('vm_addr');
+  const sessionExp = parseInt(sessionStorage.getItem('vm_exp') || '0', 10);
+  if (sessionAddr && sessionExp > Date.now()) {
+    return sessionAddr;
+  }
+  
   return null;
 }
 
@@ -348,17 +377,24 @@ function escapeHtml(text) {
 }
 
 async function restoreMailbox(address) {
-  currentAddress = address;
-  emailsCache = [];
-  document.getElementById('display-address').textContent = address;
-  showMailboxView();
-  
-  const storedExp = parseInt(localStorage.getItem('vm_exp') || '0', 10);
-  if (storedExp > Date.now()) {
-    startExpiryTimer(storedExp);
-  }
-  
   try {
+    currentAddress = address;
+    emailsCache = [];
+    
+    // Update display immediately
+    const displayEl = document.getElementById('display-address');
+    if (displayEl) displayEl.textContent = address;
+    
+    // Show mailbox section
+    showMailboxView();
+    
+    // Try to load from sessionStorage for immediate timer
+    const sessionExp = parseInt(sessionStorage.getItem('vm_exp') || localStorage.getItem('vm_exp') || '0', 10);
+    if (sessionExp > Date.now()) {
+      startExpiryTimer(sessionExp);
+    }
+    
+    // Call API to validate and sync
     const response = await fetch(API_BASE_URL + `/api/mailbox/${encodeURIComponent(address)}`);
     if (response.status === 404) {
       showNotification('Mailbox expired', 'error');
@@ -375,7 +411,8 @@ async function restoreMailbox(address) {
     startExpiryTimer(data.expiresAt);
     startPolling();
   } catch (error) {
-    startPolling();
+    console.error('[vitsmail] Restore error:', error);
+    startPolling(); // Try polling anyway
   }
 }
 
