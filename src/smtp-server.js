@@ -1,12 +1,30 @@
 const SMTPServer = require('smtp-server').SMTPServer;
 const simpleParser = require('mailparser').simpleParser;
 const store = require('./store');
+const { JSDOM } = require('jsdom');
+const createDOMPurify = require('dompurify');
+
+const window = new JSDOM('').window;
+const DOMPurify = createDOMPurify(window);
 
 const MAX_CONNECTIONS_PER_IP = 10;
 const MAX_MESSAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const CONNECTION_TIMEOUT = 30000; // 30 seconds
 
 const connectionCounts = new Map();
+
+function sanitizeHTML(html) {
+  if (!html) return '';
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
+                   'ul', 'ol', 'li', 'a', 'img', 'div', 'span', 'table', 'tr', 'td', 'th',
+                   'blockquote', 'pre', 'code', 'hr', 'font', 'center', 'b', 'i'],
+    ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'style', 'class', 'id', 'width', 'height', 'color', 'face', 'size'],
+    ALLOW_DATA_ATTR: false,
+    ALLOW_UNKNOWN_PROTOCOLS: false,
+    SANITIZE_DOM: true
+  });
+}
 
 function createSMTPServer() {
   const server = new SMTPServer({
@@ -68,7 +86,7 @@ function createSMTPServer() {
             from: fromAddress,
             subject: mail.subject || '(no subject)',
             text: mail.text || '',
-            html: mail.html || ''
+            html: sanitizeHTML(mail.html)
           });
         }
 

@@ -47,11 +47,14 @@ async function createMailbox(address) {
 function startExpiryTimer(expiresAt) {
   if (expiryInterval) clearInterval(expiryInterval);
   
+  const expiryEl = document.getElementById('expiry-time');
+  expiryEl.dataset.expiresAt = expiresAt;
+  
   function update() {
     const remaining = Math.max(0, expiresAt - Date.now());
     const minutes = Math.floor(remaining / 60000);
     const seconds = Math.floor((remaining % 60000) / 1000);
-    document.getElementById('expiry-time').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    expiryEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
     if (remaining <= 0) {
       alert('Mailbox expired!');
@@ -100,11 +103,19 @@ async function fetchEmails() {
 
 function renderEmails(emails) {
   const container = document.getElementById('emails-list');
+  const oldCount = emailsCache.length;
   emailsCache = emails;
   
   if (!emails || emails.length === 0) {
     container.innerHTML = '<p class="empty-state">No emails yet. Waiting for incoming mail...</p>';
     return;
+  }
+  
+  if (emails.length > oldCount) {
+    const newEmails = emails.slice(oldCount);
+    newEmails.forEach(email => {
+      showNotification(`New email: ${email.subject}`);
+    });
   }
   
   container.innerHTML = emails.map((email, index) => `
@@ -114,6 +125,15 @@ function renderEmails(emails) {
       <p class="meta">${new Date(email.receivedAt).toLocaleString()}</p>
     </div>
   `).join('');
+}
+
+function showNotification(message) {
+  const notif = document.createElement('div');
+  notif.className = 'notification';
+  notif.textContent = message;
+  notif.style.cssText = 'position:fixed;top:20px;right:20px;background:#4a9eff;color:#fff;padding:12px 20px;border-radius:8px;z-index:1000;animation:slideIn 0.3s ease;';
+  document.body.appendChild(notif);
+  setTimeout(() => notif.remove(), 3000);
 }
 
 function escapeHtml(text) {
@@ -127,8 +147,12 @@ window.showEmail = function(email) {
   document.getElementById('email-from').textContent = email.from;
   document.getElementById('email-time').textContent = new Date(email.receivedAt).toLocaleString();
   
-  const body = email.html || email.text || '';
-  document.getElementById('email-body').textContent = body;
+  const bodyEl = document.getElementById('email-body');
+  if (email.html) {
+    bodyEl.innerHTML = email.html;
+  } else {
+    bodyEl.textContent = email.text || '';
+  }
   
   showEmailDetail();
 };
