@@ -254,6 +254,31 @@ input:focus {
   margin-left: 10px;
 }
 
+.email-view-btn {
+  background: #4a9eff;
+  border: none;
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 10px;
+  transition: all 0.2s;
+}
+
+.email-view-btn svg {
+  width: 18px;
+  height: 18px;
+  color: #fff;
+}
+
+.email-view-btn:hover {
+  background: #3a8eef;
+  transform: scale(1.05);
+}
+
 /* Modal Styles */
 .modal {
   position: fixed;

@@ -177,15 +177,27 @@ function renderEmails(emails) {
   }
   
   container.innerHTML = emails.map((email, index) => `
-    <div class="email-item" onclick="openEmailModal(${index})">
+    <div class="email-item" data-index="${index}">
       <div class="email-item-content">
         <h4>${escapeHtml(email.subject)}</h4>
         <p class="meta">From: ${escapeHtml(email.from)}</p>
         <p class="meta">${formatTime(email.receivedAt)}</p>
       </div>
-      <span class="email-arrow">›</span>
+      <button class="email-view-btn" data-index="${index}" title="View email">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
     </div>
   `).join('');
+
+  container.querySelectorAll('.email-item, .email-view-btn').forEach(el => {
+    el.addEventListener('click', (e) => {
+      const idx = parseInt(el.dataset.index || el.closest('.email-item').dataset.index, 10);
+      openEmailModal(idx);
+    });
+  });
 }
 
 function formatTime(timestamp) {
@@ -196,6 +208,55 @@ function formatTime(timestamp) {
   if (diff < 60000) return 'Just now';
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
   return date.toLocaleString();
+}
+
+function formatPlainText(text) {
+  if (!text) return '';
+  const lines = text.split('\n');
+  let html = '';
+  let inParagraph = false;
+  
+  for (let line of lines) {
+    line = line.trim();
+    if (!line) {
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+      continue;
+    }
+    if (line.startsWith('>')) {
+      html += `<blockquote>${escapeHtml(line.substring(1).trim())}</blockquote>`;
+      continue;
+    }
+    if (line.match(/^[-*•]\s/)) {
+      if (!inParagraph) {
+        html += '<p>';
+        inParagraph = true;
+      }
+      html += `<li>${escapeHtml(line.substring(2).trim())}</li>`;
+      continue;
+    }
+    if (line.match(/^\d+\.\s/)) {
+      if (!inParagraph) {
+        html += '<p>';
+        inParagraph = true;
+      }
+      html += `<li>${escapeHtml(line.replace(/^\d+\.\s/, '').trim())}</li>`;
+      continue;
+    }
+    if (line.match(/^https?:\/\//i)) {
+      html += `<p><a href="${escapeHtml(line)}" target="_blank" rel="noopener noreferrer">${escapeHtml(line)}</a></p>`;
+      continue;
+    }
+    if (!inParagraph) {
+      html += '<p>';
+      inParagraph = true;
+    }
+    html += escapeHtml(line) + '<br>';
+  }
+  if (inParagraph) html += '</p>';
+  return html || text.replace(/\n/g, '<br>');
 }
 
 window.openEmailModal = function(index) {
@@ -220,8 +281,11 @@ window.openEmailModal = function(index) {
       a.setAttribute('target', '_blank');
       a.setAttribute('rel', 'noopener noreferrer');
     });
+  } else if (email.text) {
+    const formatted = formatPlainText(email.text);
+    bodyEl.innerHTML = formatted;
   } else {
-    bodyEl.innerHTML = email.text ? email.text.replace(/\n/g, '<br>') : '';
+    bodyEl.innerHTML = '';
   }
   
   modal.classList.add('active');
