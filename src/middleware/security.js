@@ -14,8 +14,7 @@ const helmetConfig = {
     maxAge: 31536000,
     includeSubDomains: true,
   },
-  xFrameOptions: 'DENY',
-  xContentTypeOptions: 'nosniff',
+  frameguard: { action: 'deny' },
   referrerPolicy: 'strict-origin-when-cross-origin',
 };
 
