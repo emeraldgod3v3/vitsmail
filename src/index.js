@@ -4,6 +4,7 @@ const { createSMTPServer } = require('./smtp-server');
 const store = require('./store');
 
 const PORT = process.env.PORT || 3000;
+const HTTPS_PORT = process.env.HTTPS_PORT || 443;
 const SMTP_PORT = process.env.SMTP_PORT || 25;
 const SMTP_ENABLED = process.env.SMTP_ENABLED !== 'false';
 const USE_HTTPS = process.env.USE_HTTPS === 'true';
@@ -19,8 +20,8 @@ if (USE_HTTPS) {
     key: fs.readFileSync('/etc/letsencrypt/live/vitsmail.sryze.cc/privkey.pem'),
     cert: fs.readFileSync('/etc/letsencrypt/live/vitsmail.sryze.cc/fullchain.pem')
   }, expressApp);
-  webServer = httpsServer.listen(PORT, () => {
-    console.log(`Web server running on https://localhost:${PORT}`);
+  webServer = httpsServer.listen(HTTPS_PORT, () => {
+    console.log(`Web server running on https://localhost:${HTTPS_PORT}`);
   });
 } else {
   webServer = expressApp.listen(PORT, () => {
