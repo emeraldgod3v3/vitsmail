@@ -5,6 +5,18 @@ let currentAddress = null;
 let expiryInterval = null;
 let pollInterval = null;
 let emailsCache = [];
+let activityLog = [];
+let currentEmailId = null;
+
+function logActivity(action, details = '') {
+  const entry = {
+    timestamp: Date.now(),
+    action,
+    details
+  };
+  activityLog.push(entry);
+  console.log(`[Activity] ${action}: ${details}`);
+}
 
 function showSection(sectionId) {
   document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
@@ -13,10 +25,11 @@ function showSection(sectionId) {
 
 function showMailboxView() {
   showSection('mailbox-section');
+  updateUrl(`/vitsmail/mail/${encodeURIComponent(currentAddress || '')}`);
 }
 
-function showEmailDetail() {
-  showSection('email-detail');
+function updateUrl(path) {
+  window.history.pushState({ path }, '', path);
 }
 
 async function createMailbox(address) {
@@ -29,7 +42,7 @@ async function createMailbox(address) {
     
     if (!response.ok) {
       const err = await response.json();
-      alert(err.error || 'Failed to create mailbox');
+      showNotification(err.error || 'Failed to create mailbox', 'error');
       return;
     }
     
@@ -39,8 +52,9 @@ async function createMailbox(address) {
     showMailboxView();
     startExpiryTimer(data.expiresAt);
     startPolling();
+    logActivity('mailbox_created', currentAddress);
   } catch (error) {
-    alert('Error creating mailbox: ' + error.message);
+    showNotification('Error creating mailbox: ' + error.message, 'error');
   }
 }
 
@@ -57,11 +71,10 @@ function startExpiryTimer(expiresAt) {
     expiryEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
     if (remaining <= 0) {
-      alert('Mailbox expired!');
       clearInterval(expiryInterval);
       clearInterval(pollInterval);
-      currentAddress = null;
-      showSection('create-mailbox');
+      logActivity('mailbox_expired', currentAddress);
+      showExpiryModal();
     }
   }
   
@@ -69,9 +82,50 @@ function startExpiryTimer(expiresAt) {
   expiryInterval = setInterval(update, 1000);
 }
 
+function showExpiryModal() {
+  const modal = document.getElementById('expiry-modal');
+  const summary = document.getElementById('activity-summary');
+  
+  const totalEmails = emailsCache.length;
+  const duration = activityLog.length > 0 
+    ? Math.round((activityLog[activityLog.length - 1].timestamp - activityLog[0].timestamp) / 60000) 
+    : 0;
+  
+  summary.innerHTML = `
+    <div class="summary-item">
+      <span class="summary-label">Total emails received:</span>
+      <span class="summary-value">${totalEmails}</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Session duration:</span>
+      <span class="summary-value">${duration} minutes</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Email address:</span>
+      <span class="summary-value">${currentAddress || 'N/A'}</span>
+    </div>
+  `;
+  
+  modal.classList.add('active');
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.remove('active');
+}
+
+function generateNewMailbox() {
+  closeModal('expiry-modal');
+  currentAddress = null;
+  emailsCache = [];
+  activityLog = [];
+  showSection('create-mailbox');
+  updateUrl('/');
+  logActivity('session_reset');
+}
+
 function startPolling() {
   if (pollInterval) clearInterval(pollInterval);
-  pollInterval = setInterval(fetchEmails, 3000);
+  pollInterval = setInterval(fetchEmails, 2000);
   fetchEmails();
 }
 
@@ -82,11 +136,12 @@ async function fetchEmails() {
     const response = await fetch(API_BASE_URL + `/api/mailbox/${encodeURIComponent(currentAddress)}`);
     
     if (response.status === 404) {
-      alert('Mailbox expired or deleted');
+      showNotification('Mailbox expired or deleted', 'error');
       clearInterval(expiryInterval);
       clearInterval(pollInterval);
       currentAddress = null;
       showSection('create-mailbox');
+      updateUrl('/');
       return;
     }
     
@@ -114,40 +169,47 @@ function renderEmails(emails) {
   if (emails.length > oldCount) {
     const newEmails = emails.slice(oldCount);
     newEmails.forEach(email => {
-      showNotification(`New email: ${email.subject}`);
+      showNotification(`New email: ${email.subject}`, 'success');
+      logActivity('email_received', email.subject);
     });
   }
   
   container.innerHTML = emails.map((email, index) => `
-    <div class="email-item" onclick="showEmailByIndex(${index})">
-      <h4>${escapeHtml(email.subject)}</h4>
-      <p class="meta">From: ${escapeHtml(email.from)}</p>
-      <p class="meta">${new Date(email.receivedAt).toLocaleString()}</p>
+    <div class="email-item" onclick="openEmailModal(${index})">
+      <div class="email-item-content">
+        <h4>${escapeHtml(email.subject)}</h4>
+        <p class="meta">From: ${escapeHtml(email.from)}</p>
+        <p class="meta">${formatTime(email.receivedAt)}</p>
+      </div>
+      <span class="email-arrow">›</span>
     </div>
   `).join('');
 }
 
-function showNotification(message) {
-  const notif = document.createElement('div');
-  notif.className = 'notification';
-  notif.textContent = message;
-  notif.style.cssText = 'position:fixed;top:20px;right:20px;background:#4a9eff;color:#fff;padding:12px 20px;border-radius:8px;z-index:1000;animation:slideIn 0.3s ease;';
-  document.body.appendChild(notif);
-  setTimeout(() => notif.remove(), 3000);
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-window.showEmail = function(email) {
-  document.getElementById('email-subject').textContent = email.subject;
-  document.getElementById('email-from').textContent = email.from;
-  document.getElementById('email-time').textContent = new Date(email.receivedAt).toLocaleString();
+function formatTime(timestamp) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diff = now - date;
   
-  const bodyEl = document.getElementById('email-body');
+  if (diff < 60000) return 'Just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  return date.toLocaleString();
+}
+
+window.openEmailModal = function(index) {
+  const email = emailsCache[index];
+  if (!email) return;
+  
+  currentEmailId = email.id;
+  logActivity('email_opened', email.subject);
+  updateUrl(`/vitsmail/mail/receipt/${email.id}`);
+  
+  const modal = document.getElementById('email-modal');
+  document.getElementById('modal-subject').textContent = email.subject;
+  document.getElementById('modal-from').textContent = email.from;
+  document.getElementById('modal-time').textContent = new Date(email.receivedAt).toLocaleString();
+  
+  const bodyEl = document.getElementById('modal-body');
   if (email.html) {
     bodyEl.innerHTML = email.html;
     bodyEl.querySelectorAll('a').forEach(a => {
@@ -158,32 +220,82 @@ window.showEmail = function(email) {
     bodyEl.innerHTML = email.text ? email.text.replace(/\n/g, '<br>') : '';
   }
   
-  showEmailDetail();
+  modal.classList.add('active');
 };
 
-window.showEmailByIndex = function(index) {
-  const email = emailsCache[index];
-  if (email) {
-    showEmail(email);
+window.closeEmailModal = function() {
+  closeModal('email-modal');
+  currentEmailId = null;
+  if (currentAddress) {
+    updateUrl(`/vitsmail/mail/${encodeURIComponent(currentAddress)}`);
   }
 };
 
-document.getElementById('random-btn').addEventListener('click', () => createMailbox(null));
+function showNotification(message, type = 'info') {
+  const notif = document.createElement('div');
+  notif.className = `notification notification-${type}`;
+  notif.innerHTML = `
+    <span class="notif-icon">${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span>
+    <span>${message}</span>
+  `;
+  document.body.appendChild(notif);
+  setTimeout(() => notif.classList.add('show'), 10);
+  setTimeout(() => {
+    notif.classList.remove('show');
+    setTimeout(() => notif.remove(), 300);
+  }, 3000);
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+document.getElementById('random-btn').addEventListener('click', () => {
+  logActivity('random_mailbox_requested');
+  createMailbox(null);
+});
 
 document.getElementById('custom-btn').addEventListener('click', () => {
   const username = document.getElementById('custom-username').value.trim();
   if (!username) {
-    alert('Please enter a username');
+    showNotification('Please enter a username', 'error');
     return;
   }
   const address = `${username}@${DOMAIN}`;
+  logActivity('custom_mailbox_requested', address);
   createMailbox(address);
 });
 
 document.getElementById('copy-btn').addEventListener('click', () => {
+  if (!currentAddress) return;
   navigator.clipboard.writeText(currentAddress).then(() => {
-    alert('Email address copied!');
+    showNotification('Email address copied!', 'success');
+    logActivity('address_copied');
   });
+});
+
+document.getElementById('refresh-btn').addEventListener('click', () => {
+  if (!currentAddress) return;
+  logActivity('manual_refresh');
+  fetchEmails();
+  showNotification('Refreshing...', 'info');
+});
+
+document.getElementById('new-btn').addEventListener('click', () => {
+  logActivity('new_mailbox_requested');
+  if (currentAddress) {
+    fetch(API_BASE_URL + `/api/mailbox/${encodeURIComponent(currentAddress)}`, { method: 'DELETE' });
+  }
+  clearInterval(expiryInterval);
+  clearInterval(pollInterval);
+  currentAddress = null;
+  emailsCache = [];
+  activityLog = [];
+  showSection('create-mailbox');
+  updateUrl('/');
 });
 
 document.getElementById('delete-btn').addEventListener('click', async () => {
@@ -191,13 +303,47 @@ document.getElementById('delete-btn').addEventListener('click', async () => {
   
   try {
     await fetch(API_BASE_URL + `/api/mailbox/${encodeURIComponent(currentAddress)}`, { method: 'DELETE' });
+    logActivity('mailbox_deleted', currentAddress);
     clearInterval(expiryInterval);
     clearInterval(pollInterval);
     currentAddress = null;
+    emailsCache = [];
+    activityLog = [];
     showSection('create-mailbox');
+    updateUrl('/');
+    showNotification('Mailbox deleted', 'success');
   } catch (error) {
-    alert('Error deleting mailbox: ' + error.message);
+    showNotification('Error deleting mailbox', 'error');
   }
 });
 
-document.getElementById('back-btn').addEventListener('click', showMailboxView);
+window.addEventListener('popstate', (e) => {
+  if (e.state && e.state.path) {
+    handleRoute(e.state.path);
+  }
+});
+
+function handleRoute(path) {
+  if (path === '/' || path === '') {
+    showSection('create-mailbox');
+  } else if (path.startsWith('/vitsmail/mail/')) {
+    const parts = path.split('/');
+    if (parts[3] === 'receipt' && parts[4]) {
+      const email = emailsCache.find(e => e.id === parts[4]);
+      if (email) {
+        const index = emailsCache.indexOf(email);
+        openEmailModal(index);
+      }
+    } else if (parts[3]) {
+      showMailboxView();
+    }
+  } else if (path.startsWith('/vitsmail/delete/')) {
+    const address = decodeURIComponent(parts[3]);
+    fetch(API_BASE_URL + `/api/mailbox/${encodeURIComponent(address)}`, { method: 'DELETE' });
+    logActivity('mailbox_deleted_via_url', address);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  handleRoute(window.location.pathname);
+});

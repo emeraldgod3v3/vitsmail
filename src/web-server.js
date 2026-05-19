@@ -123,6 +123,22 @@ function createWebServer() {
     }
   });
   
+  app.get('/vitsmail/delete/:address', (req, res) => {
+    try {
+      const address = req.params.address.toLowerCase();
+      
+      if (!security.validateEmailAddress(address)) {
+        return res.status(400).json({ error: 'Invalid email address format' });
+      }
+      
+      const deleted = store.deleteMailbox(address);
+      res.json({ success: deleted, message: 'Mailbox deleted' });
+    } catch (error) {
+      console.error('Delete mailbox error:', error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
   return app;
 }
 

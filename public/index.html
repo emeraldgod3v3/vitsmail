@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>vitsmail - Secure Disposable Email</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -14,25 +14,61 @@
     </header>
     
     <main>
-      <section class="create-mailbox">
+      <section class="create-mailbox" id="create-mailbox">
         <h2>Create Temporary Email</h2>
         <div class="create-options">
-          <button id="random-btn" class="btn primary">Generate Random Address</button>
+          <button id="random-btn" class="btn primary">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="5"/>
+              <path d="M16 8h.01M12 12h.01M8 16h.01"/>
+            </svg>
+            Generate Random Address
+          </button>
           <div class="custom-option">
-            <input type="text" id="custom-username" placeholder="username">
+            <input type="text" id="custom-username" placeholder="username" autocomplete="off">
             <span class="domain">@vitsmail.sryze.cc</span>
-            <button id="custom-btn" class="btn secondary">Create Custom</button>
+            <button id="custom-btn" class="btn secondary">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              Create Custom
+            </button>
           </div>
         </div>
       </section>
       
       <section class="mailbox-view hidden" id="mailbox-section">
         <div class="mailbox-header">
-          <h3>Your Temporary Email</h3>
+          <div class="mailbox-header-top">
+            <h3>Your Temporary Email</h3>
+            <div class="mailbox-actions">
+              <button id="refresh-btn" class="btn-icon-only" title="Refresh">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                </svg>
+              </button>
+              <button id="new-btn" class="btn-icon-only" title="New Email">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+              </button>
+            </div>
+          </div>
           <div class="mailbox-address">
             <span id="display-address"></span>
-            <button id="copy-btn" class="btn small">Copy</button>
-            <button id="delete-btn" class="btn small danger">Delete</button>
+            <button id="copy-btn" class="btn small">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              Copy
+            </button>
+            <button id="delete-btn" class="btn small danger">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              </svg>
+              Delete
+            </button>
           </div>
           <p class="expiry">Expires in: <span id="expiry-time"></span></p>
         </div>
@@ -41,25 +77,52 @@
           <p class="empty-state">No emails yet. Waiting for incoming mail...</p>
         </div>
       </section>
-      
-      <section class="email-detail hidden" id="email-detail">
-        <button id="back-btn" class="btn small">← Back</button>
-        <div class="email-content">
-          <div class="email-header">
-            <h3 id="email-subject"></h3>
-            <p class="email-meta">From: <span id="email-from"></span></p>
-            <p class="email-meta">Received: <span id="email-time"></span></p>
-          </div>
-          <div class="email-body" id="email-body"></div>
-        </div>
-      </section>
     </main>
     
     <footer>
       <p>All emails automatically expire after 30 minutes</p>
     </footer>
   </div>
-  
+
+  <!-- Email Modal -->
+  <div class="modal" id="email-modal">
+    <div class="modal-overlay" onclick="closeEmailModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-subject"></h3>
+        <button class="modal-close" onclick="closeEmailModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-meta">
+        <p><strong>From:</strong> <span id="modal-from"></span></p>
+        <p><strong>Received:</strong> <span id="modal-time"></span></p>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Expiry Modal -->
+  <div class="modal" id="expiry-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content expiry-content">
+      <div class="modal-header">
+        <h3>⏰ Mailbox Expired</h3>
+      </div>
+      <div class="summary-content" id="activity-summary"></div>
+      <div class="modal-actions">
+        <button class="btn primary" onclick="generateNewMailbox()">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Generate New Email
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
