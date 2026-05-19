@@ -132,11 +132,19 @@ function createWebServer() {
       }
       
       const deleted = store.deleteMailbox(address);
-      res.json({ success: deleted, message: 'Mailbox deleted' });
+      res.redirect('/');
     } catch (error) {
       console.error('Delete mailbox error:', error.message);
       res.status(500).json({ error: 'Internal server error' });
     }
+  });
+  
+  app.get('/vitsmail/mail/:address', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+  });
+  
+  app.get('/vitsmail/mail/receipt/:id', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
   });
   
   return app;
