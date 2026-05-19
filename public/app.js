@@ -380,6 +380,8 @@ async function restoreMailbox(address) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('[vitsmail] App loaded, checking for session...');
+  
   document.getElementById('random-btn').addEventListener('click', () => createMailbox(null));
   
   document.getElementById('copy-btn').addEventListener('click', () => {
@@ -425,11 +427,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
+  const path = window.location.pathname;
+  console.log('[vitsmail] Current path:', path);
+  
+  // Check for saved session in localStorage first (backup)
+  const savedAddr = localStorage.getItem('vm_addr');
+  const savedExp = parseInt(localStorage.getItem('vm_exp') || '0', 10);
+  console.log('[vitsmail] localStorage addr:', savedAddr, 'expiry:', savedExp > Date.now() ? 'valid' : 'expired');
+  
   const saved = restoreSession();
+  console.log('[vitsmail] restoreSession returned:', saved);
+  
   if (saved) {
+    console.log('[vitsmail] Restoring mailbox:', saved);
     restoreMailbox(saved);
   } else {
-    handleRoute(window.location.pathname);
+    console.log('[vitsmail] No session, using route handler');
+    handleRoute(path);
   }
 });
 
