@@ -156,9 +156,11 @@ class DatabaseManager {
   getStats() {
     const mailboxes = this.db.prepare('SELECT COUNT(*) as count FROM mailboxes').get();
     const emails = this.db.prepare('SELECT COUNT(*) as count FROM emails').get();
+    const activeUsers = this.db.prepare('SELECT COUNT(*) as count FROM mailboxes WHERE created_at > ?').get(Date.now() - 120000);
     return {
       mailboxes: mailboxes.count,
-      emails: emails.count
+      emails: emails.count,
+      activeUsers: activeUsers.count
     };
   }
 

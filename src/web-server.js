@@ -30,6 +30,7 @@ function createWebServer() {
   app.use(security.helmet);
   
   app.use(express.static(path.join(__dirname, '../public'), {
+    index: false,
     maxAge: 0,
     etag: false,
     setHeaders: (res, path) => {
@@ -39,14 +40,8 @@ function createWebServer() {
     }
   }));
   
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/vitsmail')) {
-      return next();
-    }
-    if (req.path.includes('..')) {
-      return res.status(404).send('Not found');
-    }
-    res.sendFile(path.join(__dirname, '../public/index.html'));
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/landing.html'));
   });
   
   app.post('/api/mailbox', (req, res) => {
@@ -95,9 +90,9 @@ function createWebServer() {
       
       const emails = db.getEmails(address).map(email => ({
         id: email.id,
-        from: security.sanitizeInput(email.from),
-        subject: security.sanitizeInput(email.subject),
-        text: security.sanitizeInput(email.text),
+        from: email.from,
+        subject: email.subject,
+        text: email.text,
         html: email.html,
         receivedAt: email.receivedAt
       }));
@@ -109,6 +104,16 @@ function createWebServer() {
       });
     } catch (error) {
       console.error('Get mailbox error:', error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
+  app.get('/api/stats', (req, res) => {
+    try {
+      const stats = db.getStats();
+      res.json(stats);
+    } catch (error) {
+      console.error('Stats error:', error.message);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -161,12 +166,23 @@ function createWebServer() {
     }
   });
   
+  app.get('/app', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+  });
+  
   app.get('/vitsmail/mail/:address', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/index.html'));
   });
   
   app.get('/vitsmail/mail/receipt/:id', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/index.html'));
+  });
+  
+  app.get('*', (req, res) => {
+    if (req.path.includes('..')) {
+      return res.status(404).send('Not found');
+    }
+    res.redirect('/');
   });
   
   return app;

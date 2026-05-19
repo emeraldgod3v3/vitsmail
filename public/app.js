@@ -120,7 +120,7 @@ function generateNewMailbox() {
   emailsCache = [];
   activityLog = [];
   showSection('create-mailbox');
-  updateUrl('/');
+  updateUrl('/app');
 }
 
 function startPolling() {
@@ -141,7 +141,7 @@ async function fetchEmails() {
       clearInterval(pollInterval);
       currentAddress = null;
       showSection('create-mailbox');
-      updateUrl('/');
+      updateUrl('/app');
       return;
     }
     
@@ -321,15 +321,6 @@ function escapeHtml(text) {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('random-btn').addEventListener('click', () => createMailbox(null));
   
-  document.getElementById('custom-btn').addEventListener('click', () => {
-    const username = document.getElementById('custom-username').value.trim();
-    if (!username) {
-      showNotification('Please enter a username', 'error');
-      return;
-    }
-    createMailbox(`${username}@${DOMAIN}`);
-  });
-  
   document.getElementById('copy-btn').addEventListener('click', () => {
     if (!currentAddress) return;
     navigator.clipboard.writeText(currentAddress).then(() => {
@@ -351,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
     emailsCache = [];
     activityLog = [];
     showSection('create-mailbox');
-    updateUrl('/');
+    updateUrl('/app');
   });
   
   document.getElementById('delete-btn').addEventListener('click', async () => {
@@ -364,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
       emailsCache = [];
       activityLog = [];
       showSection('create-mailbox');
-      updateUrl('/');
+      updateUrl('/app');
       showNotification('Deleted', 'success');
     } catch (e) {
       showNotification('Error deleting', 'error');
@@ -381,8 +372,11 @@ window.addEventListener('popstate', (e) => {
 });
 
 function handleRoute(path) {
-  if (!path || path === '/') {
+  if (!path || path === '/' || path === '/app') {
     showSection('create-mailbox');
+    if (path === '/') {
+      updateUrl('/app');
+    }
   } else if (path.startsWith('/vitsmail/mail/receipt/')) {
     const emailId = path.split('/').pop();
     const email = emailsCache.find(e => e.id === emailId);
@@ -390,7 +384,7 @@ function handleRoute(path) {
       const index = emailsCache.indexOf(email);
       openEmailModal(index);
     } else {
-      showMailboxView();
+      window.location.href = '/app';
     }
   } else if (path.startsWith('/vitsmail/mail/')) {
     const address = decodeURIComponent(path.split('/vitsmail/mail/')[1]);
