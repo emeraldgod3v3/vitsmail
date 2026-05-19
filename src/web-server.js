@@ -1,11 +1,12 @@
 const express = require('express');
 const path = require('path');
-const store = require('./store');
+const db = require('./database');
 const security = require('./middleware/security');
 
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
-  'https://vitsmail.onrender.com'
+  'https://vitsmail.onrender.com',
+  'https://vitsmail.sryze.cc'
 ];
 
 function createWebServer() {
@@ -31,6 +32,16 @@ function createWebServer() {
   
   app.use(express.static(path.join(__dirname, '../public')));
   
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/vitsmail')) {
+      return next();
+    }
+    if (req.path.includes('..')) {
+      return res.status(404).send('Not found');
+    }
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+  });
+  
   app.post('/api/mailbox', security.createMailboxLimiter, (req, res) => {
     try {
       let { address } = req.body;
@@ -47,7 +58,11 @@ function createWebServer() {
         return res.status(400).json({ error: 'Invalid email address format' });
       }
       
-      const mailbox = store.createMailbox(address);
+      const mailbox = db.createMailbox(address);
+      if (!mailbox) {
+        return res.status(500).json({ error: 'Failed to create mailbox' });
+      }
+      
       res.status(201).json({
         address: mailbox.address,
         expiresAt: mailbox.expiresAt
@@ -66,12 +81,12 @@ function createWebServer() {
         return res.status(400).json({ error: 'Invalid email address format' });
       }
       
-      const mailbox = store.getMailbox(address);
+      const mailbox = db.getMailbox(address);
       if (!mailbox) {
         return res.status(404).json({ error: 'Mailbox not found or expired' });
       }
       
-      const emails = store.getEmails(address).map(email => ({
+      const emails = db.getEmails(address).map(email => ({
         id: email.id,
         from: security.sanitizeInput(email.from),
         subject: security.sanitizeInput(email.subject),
@@ -99,7 +114,7 @@ function createWebServer() {
         return res.status(400).json({ error: 'Invalid email address format' });
       }
       
-      const exists = store.mailboxExists(address);
+      const exists = db.mailboxExists(address);
       res.json({ exists });
     } catch (error) {
       console.error('Check mailbox error:', error.message);
@@ -115,7 +130,7 @@ function createWebServer() {
         return res.status(400).json({ error: 'Invalid email address format' });
       }
       
-      const deleted = store.deleteMailbox(address);
+      const deleted = db.deleteMailbox(address);
       res.json({ success: deleted });
     } catch (error) {
       console.error('Delete mailbox error:', error.message);
@@ -131,7 +146,7 @@ function createWebServer() {
         return res.status(400).json({ error: 'Invalid email address format' });
       }
       
-      const deleted = store.deleteMailbox(address);
+      db.deleteMailbox(address);
       res.redirect('/');
     } catch (error) {
       console.error('Delete mailbox error:', error.message);

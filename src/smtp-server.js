@@ -1,6 +1,6 @@
 const SMTPServer = require('smtp-server').SMTPServer;
 const simpleParser = require('mailparser').simpleParser;
-const store = require('./store');
+const db = require('./database');
 const { JSDOM } = require('jsdom');
 const createDOMPurify = require('dompurify');
 
@@ -65,8 +65,8 @@ function createSMTPServer() {
         return callback(new Error('Invalid recipient domain'));
       }
       const address = recipient.address.toLowerCase();
-      if (!store.mailboxExists(address)) {
-        store.createMailbox(address);
+      if (!db.mailboxExists(address)) {
+        db.createMailbox(address);
       }
       return callback();
     },
@@ -82,7 +82,7 @@ function createSMTPServer() {
         
         for (const recipient of recipients) {
           const address = recipient.address.toLowerCase();
-          store.addEmail(address, {
+          db.addEmail(address, {
             from: fromAddress,
             subject: mail.subject || '(no subject)',
             text: mail.text || '',

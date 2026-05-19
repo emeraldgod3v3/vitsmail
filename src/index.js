@@ -1,7 +1,9 @@
 require('dotenv').config();
 const { createWebServer } = require('./web-server');
 const { createSMTPServer } = require('./smtp-server');
-const store = require('./store');
+const db = require('./database');
+const fs = require('fs');
+const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const HTTPS_PORT = process.env.HTTPS_PORT || 443;
@@ -9,13 +11,17 @@ const SMTP_PORT = process.env.SMTP_PORT || 25;
 const SMTP_ENABLED = process.env.SMTP_ENABLED !== 'false';
 const USE_HTTPS = process.env.USE_HTTPS === 'true';
 
+const dataDir = path.join(__dirname, '../data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
 const expressApp = createWebServer();
 
 let webServer;
 
 if (USE_HTTPS) {
   const https = require('https');
-  const fs = require('fs');
   const httpsServer = https.createServer({
     key: fs.readFileSync('/etc/letsencrypt/live/vitsmail.sryze.cc/privkey.pem'),
     cert: fs.readFileSync('/etc/letsencrypt/live/vitsmail.sryze.cc/fullchain.pem')
@@ -43,11 +49,12 @@ if (SMTP_ENABLED) {
   console.log('SMTP server disabled (set SMTP_ENABLED=true to enable)');
 }
 
-store.startCleanup();
+db.startCleanup();
 
 function gracefulShutdown(signal) {
   console.log(`\n${signal} received, shutting down...`);
-  store.stopCleanup();
+  db.stopCleanup();
+  db.close();
   webServer.close(() => {
     console.log('Web server closed');
     process.exit(0);
