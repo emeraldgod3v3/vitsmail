@@ -1,5 +1,4 @@
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 
 const helmetConfig = {
   contentSecurityPolicy: {
@@ -17,22 +16,6 @@ const helmetConfig = {
   frameguard: { action: 'deny' },
   referrerPolicy: 'strict-origin-when-cross-origin',
 };
-
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 70,
-  message: { error: 'Too many requests, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const createMailboxLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 7,
-  message: { error: 'Too many mailboxes created, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 function validateEmailAddress(address) {
   if (!address || typeof address !== 'string') return false;
@@ -52,10 +35,12 @@ function sanitizeInput(input) {
   return input;
 }
 
+function passthrough(req, res, next) { next(); }
+
 module.exports = {
   helmet: helmet(helmetConfig),
-  apiLimiter,
-  createMailboxLimiter,
+  apiLimiter: passthrough,
+  createMailboxLimiter: passthrough,
   validateEmailAddress,
   sanitizeInput
 };

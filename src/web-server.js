@@ -28,7 +28,6 @@ function createWebServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
   app.use(security.helmet);
-  app.use('/api', security.apiLimiter);
   
   app.use(express.static(path.join(__dirname, '../public')));
   
@@ -42,7 +41,7 @@ function createWebServer() {
     res.sendFile(path.join(__dirname, '../public/index.html'));
   });
   
-  app.post('/api/mailbox', security.createMailboxLimiter, (req, res) => {
+  app.post('/api/mailbox', (req, res) => {
     try {
       let { address } = req.body;
       
