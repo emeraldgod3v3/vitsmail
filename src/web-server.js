@@ -29,7 +29,15 @@ function createWebServer() {
   app.use(express.urlencoded({ extended: false }));
   app.use(security.helmet);
   
-  app.use(express.static(path.join(__dirname, '../public')));
+  app.use(express.static(path.join(__dirname, '../public'), {
+    maxAge: 0,
+    etag: false,
+    setHeaders: (res, path) => {
+      if (path.endsWith('.css') || path.endsWith('.js') || path.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      }
+    }
+  }));
   
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/vitsmail')) {
